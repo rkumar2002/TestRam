@@ -267,8 +267,6 @@ def main():
     available = is_available(page, cfg)
     print(f"[{label}] available={available} (was {state.get('available')})")
 
-    state_changed = False
-
     if available and not state.get("available"):
         if cfg.get("detector") in ("bms_date", "venue_date"):
             rd = cfg["requested_date"]
@@ -291,33 +289,10 @@ def main():
             )
         send_telegram(cfg["telegram_bot_token"], cfg["telegram_chat_id"], msg)
         print(f"[{label}] notification sent")
-    elif (
-        not available
-        and cfg.get("notify_unavailable_once", False)
-        and not state.get("unavailable_test_notification_sent", False)
-    ):
-        rd = cfg.get("requested_date", "")
-        pretty = f"{rd[6:8]}-{rd[4:6]}-{rd[0:4]}" if len(rd) == 8 else rd
-        venue = cfg.get("venue_label") or cfg.get("venue_code") or "your selected theatre"
-        msg = (
-            f"🧪 Telegram test: booking is not detected yet.\n\n"
-            f"{cfg.get('movie', 'Movie')}\n"
-            f"Theatre: {venue}\n"
-            f"Date: {pretty}\n\n"
-            f"This is a one-time test alert; it does not mean booking is open.\n"
-            f"Check here: {cfg['target_url']}"
-        )
-        send_telegram(cfg["telegram_bot_token"], cfg["telegram_chat_id"], msg)
-        state["unavailable_test_notification_sent"] = True
-        state_changed = True
-        print(f"[{label}] one-time unavailable test notification sent")
 
     # Persist current state so we don't re-alert every run.
     if available != state.get("available"):
         state["available"] = available
-        state_changed = True
-
-    if state_changed:
         state["checked_at"] = int(time.time())
         save_json(STATE_PATH, state)
 
